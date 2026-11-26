@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Kwhich
+Comment=Click a window to see where its program came from (Flatpak, native package, AppImage, Snap, or manual install)
+Exec=kwhich-cli
+Icon=applications-system
+Categories=System;Utility;
