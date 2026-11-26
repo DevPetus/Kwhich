@@ -15,12 +15,18 @@ add_executable(kwhich-cli
     src/capture/window_picker.cpp
     src/inspect/dual_install.cpp
     src/inspect/file_info.cpp
+    src/inspect/flatpak_path.cpp
     src/inspect/proc_info.cpp
     src/inspect/process_tree.cpp
     src/inspect/source_rules.cpp
     src/inspect/wine_path.cpp
     src/ui/inspector_panel.cpp
+    src/util/shell.cpp
 )
 
 target_include_directories(kwhich-cli PRIVATE src ${DBUS_INCLUDE_DIRS})
 target_link_libraries(kwhich-cli PRIVATE ${DBUS_LIBRARIES} Qt6::Widgets)
+
+include(GNUInstallDirs)
+install(TARGETS kwhich-cli RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES data/kwhich.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)

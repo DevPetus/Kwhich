@@ -1,40 +1,20 @@
 #include <QApplication>
 
-#include <array>
-#include <cstdio>
 #include <cstdlib>
 #include <iostream>
-#include <memory>
 #include <string>
 
 #include "capture/window_picker.h"
 #include "inspect/dual_install.h"
 #include "inspect/file_info.h"
+#include "inspect/flatpak_path.h"
 #include "inspect/proc_info.h"
 #include "inspect/process_tree.h"
 #include "inspect/source_rules.h"
 #include "ui/inspector_panel.h"
+#include "util/shell.h"
 
 namespace {
-
-/**
- * Runs a shell command and captures its stdout.
- * @param command shell command to run; stderr is discarded
- * @return trimmed stdout, or empty string if the command failed to run
- */
-std::string runCommand(const std::string& command) {
-    std::array<char, 256> buffer;
-    std::string result;
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen((command + " 2>/dev/null").c_str(), "r"), pclose);
-    if (!pipe) return {};
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        result += buffer.data();
-    }
-    while (!result.empty() && (result.back() == '\n' || result.back() == '\r')) {
-        result.pop_back();
-    }
-    return result;
-}
 
 /**
  * Resolves the distro package owning an executable, trying rpm then dpkg.
@@ -112,6 +92,14 @@ int main(int argc, char** argv) {
     if (source.kind == "Native package") {
         std::string pkg = resolvePackageName(info->exe);
         if (!pkg.empty()) source.detail = pkg;
+    } else if (source.kind == "Flatpak" && !desktopFile.empty()) {
+        // /proc/<pid>/exe reads back in the sandbox's own mount namespace view
+        // (e.g. "/app/lib/floorp/floorp"), not the host's -- translate it to
+        // the real host path so display and the open-folder/copy-path
+        // buttons/install-date all work off something that actually exists.
+        if (auto hostExe = translateFlatpakPath(info->exe, desktopFile)) {
+            info->exe = *hostExe;
+        }
     }
 
     PanelExtras extras;
@@ -121,7 +109,7 @@ int main(int argc, char** argv) {
         extras.dualInstallNote = "Both a native package and a Flatpak of this app are installed.";
     }
 
-    InspectorPanel panel(*info, source, extras);
+    InspectorPanel panel(*info, source, extras, desktopFile);
     panel.show();
 
     return app.exec();

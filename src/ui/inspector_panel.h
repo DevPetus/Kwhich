@@ -17,7 +17,8 @@ class QResizeEvent;
 
 class InspectorPanel : public QWidget {
 public:
-    InspectorPanel(const ProcInfo& info, const SourceResult& source, const PanelExtras& extras);
+    InspectorPanel(const ProcInfo& info, const SourceResult& source, const PanelExtras& extras,
+                   const std::string& desktopFile);
 
 protected:
     void resizeEvent(QResizeEvent* event) override;

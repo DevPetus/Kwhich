@@ -11,12 +11,14 @@
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QSizePolicy>
+#include <QThread>
 
 #include <csignal>
 #include <filesystem>
 #include <functional>
 
 #include "actions/file_manager.h"
+#include "inspect/flatpak_path.h"
 #include "inspect/wine_path.h"
 
 namespace {
@@ -52,23 +54,27 @@ std::string formatProcessTree(const std::vector<ProcessTreeEntry>& chain) {
 
 /**
  * Picks the first argv entry that resolves to a real, existing path and
- * differs from exePath. Handles both plain absolute Unix paths (the
+ * differs from exePath. Handles plain absolute Unix paths (the
  * `interpreter /path/to/thing args...` case, where the interpreter at
  * argv[0] usually equals exePath and gets skipped in favor of the real
- * target later in argv) and Windows-style paths from a Wine process's argv
- * -- Wine sets argv[0] itself to the target exe (e.g. Wow.exe's
- * "C:\Program Files...\Wow.exe"), which is why this doesn't start at argv[1].
+ * target later in argv), Windows-style paths from a Wine process's argv
+ * (Wine sets argv[0] itself to the target exe, which is why this doesn't
+ * start at argv[1]), and sandbox-relative /app/ paths from a Flatpak
+ * process's argv.
  * @param info proc info for the inspected process
  * @param exePath that process's resolved /proc/<pid>/exe, to skip duplicates
+ * @param desktopFile the window's desktopFile id, for Flatpak path translation
  * @return the candidate path, or empty if none of the arguments qualify
  */
-std::string findCommandLinePath(const ProcInfo& info, const std::string& exePath) {
+std::string findCommandLinePath(const ProcInfo& info, const std::string& exePath, const std::string& desktopFile) {
     for (const std::string& arg : info.argv) {
         std::string candidate;
         if (!arg.empty() && arg.front() == '/' && std::filesystem::exists(arg)) {
             candidate = arg;
         } else if (auto winePath = translateWinePath(arg, info.environ)) {
             candidate = *winePath;
+        } else if (auto flatpakPath = translateFlatpakPath(arg, desktopFile)) {
+            candidate = *flatpakPath;
         }
         if (!candidate.empty() && candidate != exePath) return candidate;
     }
@@ -121,8 +127,11 @@ QPushButton* pathChoiceButton(const QString& label, const std::string& exePath, 
  * @param info proc info for the inspected window
  * @param source detected source for that process
  * @param extras optional install date / dual-install / process tree info
+ * @param desktopFile the window's desktopFile id, if known; used for
+ *                     Flatpak path translation in the command line option
  */
-InspectorPanel::InspectorPanel(const ProcInfo& info, const SourceResult& source, const PanelExtras& extras) {
+InspectorPanel::InspectorPanel(const ProcInfo& info, const SourceResult& source, const PanelExtras& extras,
+                               const std::string& desktopFile) {
     setWindowTitle("Kwhich");
     setMinimumWidth(420);
 
@@ -146,7 +155,7 @@ InspectorPanel::InspectorPanel(const ProcInfo& info, const SourceResult& source,
 
     const int pid = info.pid;
     const std::string exePathStd = info.exe;
-    const std::string cmdlinePathStd = findCommandLinePath(info, exePathStd);
+    const std::string cmdlinePathStd = findCommandLinePath(info, exePathStd, desktopFile);
 
     auto* openFolderButton =
         pathChoiceButton("Open folder", exePathStd, cmdlinePathStd, [](const std::string& path) { showInFileManager(path); });
@@ -161,6 +170,12 @@ InspectorPanel::InspectorPanel(const ProcInfo& info, const SourceResult& source,
     });
     connect(killButton, &QPushButton::clicked, this, [this, pid]() {
         ::kill(pid, SIGTERM);
+        // some apps (Electron/Chromium ones in particular) don't exit
+        // promptly on SIGTERM -- give it a moment, then force it.
+        QThread::msleep(500);
+        if (::kill(pid, 0) == 0) {
+            ::kill(pid, SIGKILL);
+        }
         close();
     });
 
