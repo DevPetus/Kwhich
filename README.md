@@ -26,7 +26,7 @@ call and Linux's `/proc`, so this is Linux/KDE-only by design.
 ### Fedora (COPR)
 
 ```
-sudo dnf copr enable devpetus/kwhich
+sudo dnf copr enable devpetus/Kwhich
 sudo dnf install kwhich
 ```
 
@@ -74,6 +74,10 @@ work — each degrades gracefully if missing:
   interface (Dolphin, Nautilus, Nemo, ...) — for the Open Folder button
 - `plasma-systemmonitor` — for the System Monitor button
 - `flatpak` — for the dual-install (native + Flatpak) check
+
+## Disclaimer
+
+This project is vibe coded af
 
 ## License
 
