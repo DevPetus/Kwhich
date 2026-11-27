@@ -1,14 +1,11 @@
-%global commit0 851003db1a19c1a84139a99e392bc2de3a52b115
-%global shortcommit0 %(c=%{commit0}; echo ${c:0:7})
-
 Name:           kwhich
 Version:        0
-Release:        0.1.git%{shortcommit0}%{?dist}
+Release:        %autorelease
 Summary:        Click a window to see where its program came from
 
 License:        MIT
 URL:            https://github.com/DevPetus/Kwhich
-Source0:        https://github.com/DevPetus/Kwhich/archive/%{commit0}/Kwhich-%{commit0}.tar.gz
+Source0:        https://github.com/DevPetus/Kwhich/archive/refs/heads/main.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -29,7 +26,7 @@ manual install -- plus the process ancestry, install date, and a note
 if both a native and a Flatpak version are installed.
 
 %prep
-%setup -n Kwhich-%{commit0}
+%autosetup -n Kwhich-main
 
 %build
 %cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo
@@ -54,5 +51,4 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/kwhich.desktop
 %desktop_database_postun
 
 %changelog
-* Thu Nov 26 2026 DevPetus <devebourgeo@gmail.com> - 0-0.1.git851003d
-- Initial packaging
+%autochangelog

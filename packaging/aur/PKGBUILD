@@ -1,0 +1,31 @@
+# Maintainer: DevPetus <devebourgeo@gmail.com>
+pkgname=kwhich-git
+pkgver=r3.f83ab37
+pkgrel=1
+pkgdesc="Click a window to see where its program came from (Flatpak, native package, AppImage, Snap, or manual install)"
+arch=('x86_64')
+url="https://github.com/DevPetus/Kwhich"
+license=('MIT')
+depends=('qt6-base' 'dbus')
+optdepends=('dolphin: used by the Open Folder button'
+            'plasma-systemmonitor: used by the System Monitor button'
+            'flatpak: enables dual-install detection')
+makedepends=('cmake' 'git')
+provides=('kwhich')
+conflicts=('kwhich')
+source=("$pkgname::git+https://github.com/DevPetus/Kwhich.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$pkgname"
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+    cmake -S "$pkgname" -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+    cmake --build build
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+}
