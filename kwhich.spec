@@ -44,11 +44,5 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/kwhich.desktop
 %{_bindir}/kwhich-cli
 %{_datadir}/applications/kwhich.desktop
 
-%post
-%desktop_database_post
-
-%postun
-%desktop_database_postun
-
 %changelog
 %autochangelog
